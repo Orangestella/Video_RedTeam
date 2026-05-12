@@ -1,0 +1,113 @@
+model:
+  model_path: "./checkpoints/sft_checkpoint"  # Path to Stage 1 SFT checkpoint
+  num_layers_unfrozen: 2
+  model_extra_configs:
+    attn_implementation: "eager"
+
+tokenizer:
+  tokenizer_path: "./checkpoints/sft_checkpoint"
+  padding_side: "left"
+  truncation_side: "right"
+  tokenizer_extra_configs: {}
+
+optimizer:
+  name: "adamw"
+  kwargs:
+    lr: 1.0e-6
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+
+scheduler:
+  name: "cosine_annealing"
+  kwargs:
+    T_max: 500
+    eta_min: 1.0e-7
+
+train:
+  seq_length: 256
+  epochs: 3
+  total_steps: 500
+  batch_size: 1
+  max_batches: 200
+  trainer: "AcceleratePPOTrainer"
+  tracker: null
+  checkpoint_interval: 500
+  eval_interval: 64
+  pipeline: "PromptPipeline"
+  checkpoint_dir: "./checkpoints/ppo"
+  logging_dir: "./runs/log_dir"
+
+accelerate:
+  compute_environment: "LOCAL_MACHINE"
+  distributed_type: "NO"
+  downcast_bf16: "no"
+  gpu_ids: "0"
+  machine_rank: 0
+  main_training_function: "main"
+  mixed_precision: "bf16"
+  num_machines: 1
+  num_processes: 1
+  rdzv_backend: "static"
+  same_network: true
+  tpu_env: []
+  tpu_use_cluster: false
+  tpu_use_sudo: false
+  use_cpu: false
+
+video:
+  # Data
+  data_path: "./data/ppo_data.json"
+
+  # Run directory
+  run_dir: "./runs/video_ppo"
+
+  # GPU allocation (adjust to your hardware)
+  train_cuda: "0"
+  reward_cuda: "1"
+  video_gen_cuda: "2,3"
+
+  # Video generator (Wan2.2)
+  wan_script_path: "./Wan2.2/generate.py"
+  wan_task: "ti2v-5B"
+  wan_ckpt_dir: "./checkpoints/Wan2.2-TI2V-5B"
+  wan_size: "1280*704"
+  wan_frame_num: 50
+  video_timeout_seconds: 1800
+
+  # Memory optimization
+  offload_model: false
+  convert_model_dtype: true
+  t5_cpu: false
+
+  # Reward model (VideoReward)
+  reward_checkpoint: "./checkpoints/VideoReward"
+  reward_dtype: "bf16"
+
+method:
+  name: 'ppoconfig'
+  num_rollouts: 4
+  chunk_size: 4
+  ppo_epochs: 5
+  init_kl_coef: 0.7
+  target: 0.1
+  horizon: 5000
+  gamma: 1
+  lam: 0.95
+  cliprange: 0.1
+  cliprange_value: 0.1
+  scale_reward: null
+  ref_mean: null
+  ref_std: null
+  cliprange_reward: 1.0
+  vf_coef: 1.0
+  gen_kwargs:
+    max_new_tokens: 100
+    min_length: 3
+    top_k: 0.0
+    top_p: 1.0
+    do_sample: False
+    temperature: 0.7
+    diversity_penalty: 1.0
+    num_beams: 16
+    num_beam_groups: 16

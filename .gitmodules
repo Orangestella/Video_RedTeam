@@ -1,0 +1,9 @@
+[submodule "VideoAlign"]
+	path = VideoAlign
+	url = https://github.com/KwaiVGI/VideoAlign.git
+[submodule "Wan2.2"]
+	path = Wan2.2
+	url = https://github.com/Wan-Video/Wan2.2.git
+[submodule "trlx"]
+	path = trlx
+	url = https://github.com/CarperAI/trlx.git

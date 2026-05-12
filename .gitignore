@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Checkpoints & models
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Data (sensitive)
+data/*.json
+data/*.txt
+*.npy
+
+# Logs
+wandb/
+runs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Binary wheels
+*.whl
+
+# Output
+output/
+videos/

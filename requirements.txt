@@ -1,0 +1,11 @@
+torch>=2.0.0
+transformers>=4.40.0
+peft>=0.10.0
+accelerate>=0.27.0
+PyYAML
+numpy
+scikit-learn
+nltk
+tqdm
+openai
+requests
