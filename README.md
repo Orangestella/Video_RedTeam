@@ -62,6 +62,51 @@ The following are included as git submodules:
 - [Wan2.2](https://github.com/Wan-Video/Wan2.2) - Video generation model
 - [trlx](https://github.com/CarperAI/trlx) - RL training framework
 
+## Model & Data Downloads
+
+### Models
+
+We provide our trained checkpoints and use the following public models. All are hosted on HuggingFace:
+
+| Model | Description | Link |
+|-------|-------------|------|
+| TEAR-SFT | Stage 1 SFT checkpoint (Llama-3-8B + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-SFT) |
+| TEAR-PPO | Stage 2 PPO checkpoint (Llama-3-8B + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-PPO) |
+| Meta-Llama-3-8B | Base LLM for generator | [meta-llama/Meta-Llama-3-8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B) |
+| Llama-Guard-3-8B | Textual safety filter | [meta-llama/Llama-Guard-3-8B](https://huggingface.co/meta-llama/Llama-Guard-3-8B) |
+| Qwen-3-VL | VLM for video evaluation & refinement | [Qwen/Qwen3-VL](https://huggingface.co/Qwen/Qwen3-VL) |
+| Wan2.2-TI2V-5B | Text-image-to-video generation | [Wan-AI/Wan2.2-TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) |
+| VideoReward | Video-text alignment reward model | [KwaiVGI/VideoReward](https://huggingface.co/KwaiVGI/VideoReward) |
+| roberta_toxicity_classifier | Toxicity detector for PSR | [s-nlp/roberta_toxicity_classifier](https://huggingface.co/s-nlp/roberta_toxicity_classifier) |
+| nsfw-text-detection-large | NSFW text detector for PSR | [MichalMlodawski/nsfw-text-detection-large](https://huggingface.co/MichalMlodawski/nsfw-text-detection-large) |
+
+Download our checkpoints:
+
+```bash
+# Stage 1 SFT checkpoint
+huggingface-cli download <your-org>/TEAR-SFT --local-dir ./checkpoints/sft_checkpoint
+
+# Stage 2 PPO checkpoint
+huggingface-cli download <your-org>/TEAR-PPO --local-dir ./checkpoints/ppo_model
+```
+
+### Data
+
+Training data and seed prompts are available on HuggingFace. See [`data/README.md`](data/README.md) for format details.
+
+| Dataset | Description | Link |
+|---------|-------------|------|
+| TEAR-SFT-Data | SFT training data (temporal rewriting pairs) | [HuggingFace](https://huggingface.co/datasets/<your-org>/TEAR-SFT-Data) |
+| TEAR-PPO-Data | PPO training prompts | [HuggingFace](https://huggingface.co/datasets/<your-org>/TEAR-PPO-Data) |
+| TEAR-Seeds | 390 seed prompts (6 categories x 65) from T2VSafetyBench | [HuggingFace](https://huggingface.co/datasets/<your-org>/TEAR-Seeds) |
+
+```bash
+# Download all data
+huggingface-cli download <your-org>/TEAR-SFT-Data --repo-type dataset --local-dir ./data
+huggingface-cli download <your-org>/TEAR-PPO-Data --repo-type dataset --local-dir ./data
+huggingface-cli download <your-org>/TEAR-Seeds --repo-type dataset --local-dir ./data
+```
+
 ## Usage
 
 ### Stage 1: SFT Training

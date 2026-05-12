@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:arxiv.org)",
+      "Bash(rm -rf Pipeline/__pycache__)",
+      "Bash(rm -rf Pipeline/TEAR.py Pipeline/README.md Pipeline/run.sh)",
+      "Bash(ls -la Pipeline/)",
+      "Bash(rmdir Pipeline)",
+      "Bash(rm -rf Pipeline)",
+      "Bash(rm -f *.whl)",
+      "Bash(rm -f VideoAlign/download.log VideoAlign/condaenv.*.txt)",
+      "Bash(git add *)"
+    ]
+  }
+}
