@@ -164,7 +164,7 @@ class VideoRewardPipeline:
             if len(video_idx_list) >= 2:
                 vae_idx = int(video_idx_list[1])
 
-            self.wan_ti2v = wan.WanTI2V(
+            self.wan_t2v = wan.WanT2V(
                 config=cfg,
                 checkpoint_dir=self.wan_ckpt_dir,
                 device_id=gen_idx,
@@ -178,7 +178,7 @@ class VideoRewardPipeline:
 
             if vae_idx != gen_idx:
                 vae_device = torch.device(f"cuda:{vae_idx}")
-                original_decode = self.wan_ti2v.vae.decode
+                original_decode = self.wan_t2v.vae.decode
 
                 def decode_with_device_transfer(zs):
                     if isinstance(zs, list):
@@ -187,19 +187,19 @@ class VideoRewardPipeline:
                         zs_on_vae = zs.to(vae_device) if isinstance(zs, torch.Tensor) else zs
                     result = original_decode(zs_on_vae)
                     if isinstance(result, list):
-                        result = [r.to(self.wan_ti2v.device) if isinstance(r, torch.Tensor) else r for r in result]
+                        result = [r.to(self.wan_t2v.device) if isinstance(r, torch.Tensor) else r for r in result]
                     elif isinstance(result, torch.Tensor):
-                        result = result.to(self.wan_ti2v.device)
+                        result = result.to(self.wan_t2v.device)
                     return result
 
-                self.wan_ti2v.vae.decode = decode_with_device_transfer
-                self.wan_ti2v.vae.device = vae_device
-                self.wan_ti2v.vae.model = self.wan_ti2v.vae.model.to(vae_device)
+                self.wan_t2v.vae.decode = decode_with_device_transfer
+                self.wan_t2v.vae.device = vae_device
+                self.wan_t2v.vae.model = self.wan_t2v.vae.model.to(vae_device)
 
-                if hasattr(self.wan_ti2v.vae, 'scale') and isinstance(self.wan_ti2v.vae.scale, list):
-                    self.wan_ti2v.vae.scale = [
+                if hasattr(self.wan_t2v.vae, 'scale') and isinstance(self.wan_t2v.vae.scale, list):
+                    self.wan_t2v.vae.scale = [
                         s.to(vae_device) if isinstance(s, torch.Tensor) else s
-                        for s in self.wan_ti2v.vae.scale
+                        for s in self.wan_t2v.vae.scale
                     ]
 
             self.wan_cfg = cfg
@@ -214,13 +214,12 @@ class VideoRewardPipeline:
     def _wan_generate_batch(self, prompts: list[str], output_paths: list[str]):
         os.makedirs(os.path.dirname(output_paths[0]), exist_ok=True)
         try:
-            if self.video_generator_initialized and hasattr(self, 'wan_ti2v'):
+            if self.video_generator_initialized and hasattr(self, 'wan_t2v'):
                 for i, (prompt, output_path) in enumerate(zip(prompts, output_paths)):
                     print(f"Generating video {i+1}/{len(prompts)}: {output_path}")
                     try:
-                        video = self.wan_ti2v.generate(
+                        video = self.wan_t2v.generate(
                             prompt,
-                            img=None,
                             size=self.wan_size_config,
                             max_area=self.wan_max_area_config,
                             frame_num=self.wan_frame_num,

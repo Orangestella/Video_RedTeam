@@ -70,15 +70,15 @@ We provide our trained checkpoints and use the following public models. All are 
 
 | Model | Description | Link |
 |-------|-------------|------|
-| TEAR-SFT | Stage 1 SFT checkpoint (Llama-3-8B + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-SFT) |
-| TEAR-PPO | Stage 2 PPO checkpoint (Llama-3-8B + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-PPO) |
-| Meta-Llama-3-8B | Base LLM for generator | [meta-llama/Meta-Llama-3-8B](https://huggingface.co/meta-llama/Meta-Llama-3-8B) |
+| TEAR-SFT | Stage 1 SFT checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-SFT) |
+| TEAR-PPO | Stage 2 PPO checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-PPO) |
+| Meta-Llama-3-8B-Instruct | Base LLM for generator | [meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) |
 | Llama-Guard-3-8B | Textual safety filter | [meta-llama/Llama-Guard-3-8B](https://huggingface.co/meta-llama/Llama-Guard-3-8B) |
-| Qwen-3-VL | VLM for video evaluation & refinement | [Qwen/Qwen3-VL](https://huggingface.co/Qwen/Qwen3-VL) |
-| Wan2.2-TI2V-5B | Text-image-to-video generation | [Wan-AI/Wan2.2-TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) |
+| Qwen3-VL-2B-Instruct | VLM for video evaluation & refinement | [Qwen/Qwen3-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct) |
+| Wan2.2-T2V-A14B | Text-to-video generation | [Wan-AI/Wan2.2-T2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B) |
 | VideoReward | Video-text alignment reward model | [KwaiVGI/VideoReward](https://huggingface.co/KwaiVGI/VideoReward) |
 | roberta_toxicity_classifier | Toxicity detector for PSR | [s-nlp/roberta_toxicity_classifier](https://huggingface.co/s-nlp/roberta_toxicity_classifier) |
-| nsfw-text-detection-large | NSFW text detector for PSR | [MichalMlodawski/nsfw-text-detection-large](https://huggingface.co/MichalMlodawski/nsfw-text-detection-large) |
+| nsfw-text-detection-large | NSFW text detector for PSR | [TostAI/nsfw-text-detection-large](https://huggingface.co/TostAI/nsfw-text-detection-large) |
 
 Download our checkpoints:
 
@@ -113,7 +113,7 @@ huggingface-cli download <your-org>/TEAR-Seeds --repo-type dataset --local-dir .
 
 ```bash
 python stage1_sft/train_sft.py \
-    --base_model <path_to_llama3_8b> \
+    --base_model <path_to_llama3_8b_instruct> \
     --data_path ./data/sft_data.json \
     --output_dir ./checkpoints/sft_checkpoint \
     --num_train_steps 4000 \
@@ -139,8 +139,8 @@ python stage3_refine/tear_pipeline.py \
     --enable-refine \
     --llm-path ./checkpoints/ppo_model \
     --guard-path <path_to_llama_guard_3_8b> \
-    --refine-path <path_to_qwen3_vl> \
-    --video-ckpt <path_to_wan2.2_ti2v_5b> \
+    --refine-path <path_to_qwen3_vl_2b_instruct> \
+    --video-ckpt <path_to_wan2.2_t2v_a14b> \
     --guard-gpu cuda:0 \
     --llm-gpu cuda:1 \
     --refine-gpu cuda:2 \
@@ -168,6 +168,8 @@ python evaluation/compute_psr.py \
 
 ### Commercial T2V Model Testing
 
+We evaluate on three commercial T2V services: **Google Veo-3.1**, **MiniMax Hailuo-2.3**, and **Luma Ray-2**.
+
 ```bash
 python video_generation/api_generator.py \
     --prompt "your prompt here" \
@@ -178,15 +180,15 @@ python video_generation/api_generator.py \
 
 ## Hardware Requirements
 
-- Minimum 4x NVIDIA GPUs with 24GB+ VRAM each
-- Recommended: 4x A6000 (48GB) or equivalent
+- Minimum 4x NVIDIA GPUs with 48GB+ VRAM each
+- Recommended: 4x A6000 (48GB) or 4x A100 (80GB)
 
 | Component | GPU | VRAM |
 |-----------|-----|------|
 | Llama Guard 3 8B | GPU 0 | ~16GB |
 | LLM Generator (Llama-3 8B + LoRA) | GPU 1 | ~16GB |
-| Refine Model (Qwen-3-VL) | GPU 2 | ~6GB |
-| Video Model (Wan2.2-TI2V-5B) | GPU 3 | ~20GB |
+| Refine Model (Qwen3-VL-2B-Instruct) | GPU 2 | ~6GB |
+| Video Model (Wan2.2-T2V-A14B) | GPU 3 | ~28GB |
 
 ## Ethical Statement
 

@@ -9,7 +9,25 @@
       "Bash(rm -rf Pipeline)",
       "Bash(rm -f *.whl)",
       "Bash(rm -f VideoAlign/download.log VideoAlign/condaenv.*.txt)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(hf download *)",
+      "Bash(hf --version)",
+      "Bash(hf whoami *)",
+      "Read(//home/zhw/.cache/huggingface/**)",
+      "Read(//home/zhw/.huggingface/**)",
+      "Bash(conda env *)",
+      "Bash(env)",
+      "Bash(pip show *)",
+      "Bash(python -c \"import huggingface_hub; print\\(huggingface_hub.__version__\\)\")",
+      "Read(//home/zhw/**)",
+      "Bash(/home/zhw/miniconda3/bin/hf --version)",
+      "Bash(/home/zhw/miniconda3/bin/hf whoami *)",
+      "Bash(/home/zhw/miniconda3/bin/hf auth *)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('Wan2.2-T2V-A14B/high_noise_model/diffusion_pytorch_model.safetensors.index.json'\\)\\); files=set\\(d['weight_map'].values\\(\\)\\); print\\(sorted\\(files\\)\\); print\\('total:',len\\(files\\)\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\('Meta-Llama-3-8B/model.safetensors.index.json'\\)\\); files=set\\(d['weight_map'].values\\(\\)\\); print\\(sorted\\(files\\)\\)\")",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(awk '{print \"rx_bytes:\", $2}')",
+      "Bash(/home/zhw/miniconda3/bin/hf download *)"
     ]
   }
 }

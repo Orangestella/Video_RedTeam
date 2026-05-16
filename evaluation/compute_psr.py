@@ -3,7 +3,7 @@ Compute PSR (Prompt Successful Pass rate) using multiple textual safety filters.
 
 Evaluates generated prompts against the three textual filters (Phi_P) from the paper:
   1. Toxicity Detector (s-nlp/roberta_toxicity_classifier)
-  2. NSFW text detector (MichalMlodawski/nsfw-text-detection-large)
+  2. NSFW text detector (TostAI/nsfw-text-detection-large)
   3. Llama-Guard-3-8B
 
 A prompt passes if ALL filters classify it as safe.

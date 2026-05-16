@@ -1,7 +1,7 @@
 """
 NSFW text detection for Prompt Successful Pass rate (PSR).
 
-Uses MichalMlodawski/nsfw-text-detection-large to classify prompts
+Uses TostAI/nsfw-text-detection-large to classify prompts
 as SAFE (0), SKIP (1), or UNSAFE (2).
 """
 

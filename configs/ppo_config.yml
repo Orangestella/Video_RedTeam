@@ -69,9 +69,9 @@ video:
 
   # Video generator (Wan2.2)
   wan_script_path: "./Wan2.2/generate.py"
-  wan_task: "ti2v-5B"
-  wan_ckpt_dir: "./checkpoints/Wan2.2-TI2V-5B"
-  wan_size: "1280*704"
+  wan_task: "t2v-A14B"
+  wan_ckpt_dir: "./checkpoints/Wan2.2-T2V-A14B"
+  wan_size: "1024*704"
   wan_frame_num: 50
   video_timeout_seconds: 1800
 
