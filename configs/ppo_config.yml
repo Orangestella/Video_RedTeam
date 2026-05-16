@@ -80,9 +80,34 @@ video:
   convert_model_dtype: true
   t5_cpu: false
 
-  # Reward model (VideoReward)
+  # Reward model (VideoReward / VideoAlign) used for g_gc (TA head) and g_ic (VQ+MQ)
   reward_checkpoint: "./checkpoints/VideoReward"
   reward_dtype: "bf16"
+
+  # Temporal consistency reward R_con (paper Eq. 5):
+  #   R_con = min(beta, (g_gc - gamma1)/theta1 + (g_ic - gamma2)/theta2)
+  temporal_reward:
+    gamma1: 0.0     # offset for g_gc (TA against the original seed p_s)
+    gamma2: 0.0     # offset for g_ic (VQ + MQ)
+    theta1: 1.0     # scale for g_gc
+    theta2: 1.0     # scale for g_ic
+    beta: 5.0       # clipping upper bound
+
+  # Prompt-level reward R_pmt (paper Eq. 3):
+  #   R_pmt = alpha1*(1 - g_t(p_t)) + alpha2*(g_r(p_t) + 1)/2
+  prompt_reward:
+    enabled: true
+    alpha1: 0.5
+    alpha2: 0.5
+    # Hate-speech classifier g_t (paper [36] Vidgen et al. 2021)
+    hate_model_id: "facebook/roberta-hate-speech-dynabench-r4-target"
+    # Sentence encoder T_p(.) for the prototype embedding
+    sentence_encoder_id: "sentence-transformers/all-MiniLM-L6-v2"
+    # Optional path to reference temporal-style prompts used to build the
+    # prototype. Accepts .txt (one per line) or .json/.jsonl with an
+    # 'output'/'prompt'/'text' field. If omitted, the trainer falls back to
+    # the `output` field of the PPO/SFT dataset.
+    reference_prompts_path: null
 
 method:
   name: 'ppoconfig'

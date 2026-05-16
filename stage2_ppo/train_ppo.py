@@ -1,9 +1,12 @@
 """
-Stage 2: Temporal-aware Online Preference Learning via PPO.
+Stage 2: Temporal-aware Online Preference Learning via PPO (TEAR § 3.3.2).
 
-Optimizes the test generator using PPO with video-level rewards:
-  - Prompt-level reward (Rpmt): textual safety + temporal style similarity
-  - Temporal consistency reward (Rcon): video-text alignment + temporal coherence
+Combines two reward signals per Eq. 3 and Eq. 5 of the paper:
+  - Prompt-level reward Rpmt: alpha1*(1-g_t(p_t)) + alpha2*(g_r(p_t)+1)/2
+  - Temporal consistency reward Rcon:
+        min(beta, (g_gc(p_s, v) - gamma1)/theta1 + (g_ic(v) - gamma2)/theta2)
+The PPO objective adds a KL penalty against the SFT-initialised reference
+policy, which is handled inside trlx via init_kl_coef in ppo_config.yml.
 """
 
 import argparse
@@ -98,6 +101,11 @@ if os.path.isdir(_local_trlx) and _local_trlx not in sys.path:
 import trlx
 from trlx.data.configs import TRLConfig
 
+from rewards import (
+    build_prompt_reward_from_config,
+    build_temporal_reward_from_config,
+)
+
 
 class VideoRewardPipeline:
     def __init__(self, cfg: TRLConfig):
@@ -142,6 +150,19 @@ class VideoRewardPipeline:
         self.reward_inferencer = VideoVLMRewardInference(
             load_from_pretrained=self.reward_ckpt, device=reward_device, dtype=dtype
         )
+
+        self.temporal_reward = build_temporal_reward_from_config(cfg, self.reward_inferencer)
+
+        prompt_reward_device = "cpu"
+        if torch.cuda.is_available():
+            prompt_reward_device = f"cuda:{reward_idx_env}"
+        try:
+            self.prompt_reward = build_prompt_reward_from_config(
+                cfg, fallback_prompts=None, device=prompt_reward_device
+            )
+        except Exception as e:
+            print(f"Prompt reward init failed: {e}")
+            self.prompt_reward = None
 
         self._init_video_generator()
 
@@ -312,22 +333,50 @@ class VideoRewardPipeline:
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+        # g_gc must use the original seed p_s (paper Eq. 5). Fall back to the
+        # rewritten p_t only when no seed was provided, to keep training robust.
+        seed_for_align = []
+        for i, p in enumerate(improved_prompts):
+            if base_prompts and i < len(base_prompts) and isinstance(base_prompts[i], str) and base_prompts[i].strip():
+                seed_for_align.append(base_prompts[i])
+            else:
+                seed_for_align.append(p)
+
         with torch.no_grad():
             try:
-                rewards_dicts = self.reward_inferencer.reward(
-                    video_paths=video_paths, prompts=improved_prompts, use_norm=True
+                rcon_scores, raw_rewards = self.temporal_reward.score(
+                    video_paths=video_paths, seed_prompts=seed_for_align
                 )
             except Exception as e:
-                print(f"Reward computation failed: {e}")
-                rewards_dicts = [{"Overall": 0.0} for _ in improved_prompts]
+                print(f"Temporal reward (Rcon) failed: {e}")
+                rcon_scores = [0.0] * len(improved_prompts)
+                raw_rewards = [{"VQ": 0.0, "MQ": 0.0, "TA": 0.0} for _ in improved_prompts]
+
+        if self.prompt_reward is not None:
+            try:
+                rpmt_scores = self.prompt_reward(improved_prompts)
+            except Exception as e:
+                print(f"Prompt reward (Rpmt) failed: {e}")
+                rpmt_scores = [0.0] * len(improved_prompts)
+        else:
+            rpmt_scores = [0.0] * len(improved_prompts)
 
         scores = []
         with open(self.index_path, "a", encoding="utf-8") as f:
-            for rec, rdict in zip(records, rewards_dicts):
+            for rec, raw, r_con, r_pmt in zip(records, raw_rewards, rcon_scores, rpmt_scores):
+                total = float(r_pmt) + float(r_con)
                 rec_with_reward = dict(rec)
-                rec_with_reward["reward"] = rdict
+                rec_with_reward["reward"] = {
+                    "video_raw": raw,
+                    "g_gc": float(raw.get("TA", 0.0)),
+                    "g_ic": float(raw.get("VQ", 0.0)) + float(raw.get("MQ", 0.0)),
+                    "R_con": float(r_con),
+                    "R_pmt": float(r_pmt),
+                    "total": total,
+                }
                 f.write(json.dumps(rec_with_reward, ensure_ascii=False) + "\n")
-                scores.append(float(rdict.get("Overall", 0.0)))
+                scores.append(total)
 
         batch_end_time = time.time()
         batch_duration = batch_end_time - batch_start_time
@@ -425,6 +474,23 @@ def main(args):
 
     vrp = VideoRewardPipeline(trl_config)
 
+    # Best-effort: rebuild the prompt-reward prototype using SFT/PPO `output`
+    # fields if the user didn't supply a dedicated reference file.
+    if vrp.prompt_reward is not None and getattr(vrp.prompt_reward, "prototype", None) is None:
+        try:
+            from rewards import _load_reference_prompts
+            fallback_refs = _load_reference_prompts(None, fallback=[
+                item.get("output", "") for item in (prompt_data or [])
+                if isinstance(item, dict) and item.get("output")
+            ])
+            if fallback_refs:
+                embs = vrp.prompt_reward._encode(fallback_refs, batch_size=16)
+                proto = embs.mean(dim=0)
+                vrp.prompt_reward.prototype = proto / (proto.norm(p=2) + 1e-12)
+                print(f"[PromptReward] prototype rebuilt from {len(fallback_refs)} dataset outputs.")
+        except Exception as e:
+            print(f"[PromptReward] fallback prototype build skipped: {e}")
+
     def reward_fn(samples: list[str], **kwargs):
         if vrp.max_batches is not None and vrp.total_batches >= vrp.max_batches:
             print(f"\nReached max batch limit ({vrp.max_batches}), stopping training.")
@@ -435,6 +501,19 @@ def main(args):
             if key in kwargs and isinstance(kwargs[key], list):
                 base_prompts = kwargs[key]
                 break
+
+        outputs = kwargs.get("outputs")
+        if isinstance(outputs, list) and len(outputs) == len(samples):
+            rewritten_prompts = [str(o).strip() for o in outputs]
+        else:
+            # Fallback: strip the assistant header from `samples` if outputs are unavailable.
+            rewritten_prompts = []
+            for s in samples:
+                tag = "<|start_header_id|>assistant<|end_header_id|>"
+                if tag in s:
+                    rewritten_prompts.append(s.split(tag, 1)[1].split("<|eot_id|>")[0].strip())
+                else:
+                    rewritten_prompts.append(s)
 
         original_inputs = []
         if base_prompts:
@@ -449,8 +528,7 @@ def main(args):
                 else:
                     original_inputs.append(prompt)
 
-        video_prompts = samples
-        scores = vrp.generate_and_score(video_prompts, step=0, base_prompts=original_inputs)
+        scores = vrp.generate_and_score(rewritten_prompts, step=0, base_prompts=original_inputs)
 
         if not scores or len(scores) == 0:
             scores = [0.0] * len(samples)
