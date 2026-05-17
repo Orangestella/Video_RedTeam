@@ -10,26 +10,36 @@ tokenizer:
   truncation_side: "right"
   tokenizer_extra_configs: {}
 
+# Optimizer / scheduler / training-length controls.
+# TEAR paper § 4.1 pins the online-RL stage to: AdamW, LR 1e-6, gamma=1.0,
+# lam=0.95, cosine scheduler. It does NOT pin the number of training rounds,
+# steps, batches, or epochs — those are budget choices left to the user.
 optimizer:
   name: "adamw"
   kwargs:
-    lr: 1.0e-6
+    lr: 1.0e-6           # paper-pinned
     weight_decay: 0.01
     betas: [0.9, 0.999]
     eps: 1.0e-8
 
 scheduler:
-  name: "cosine_annealing"
+  name: "cosine_annealing"   # paper-pinned schedule shape
   kwargs:
+    # T_max should track train.total_steps for a full cosine sweep down to eta_min.
     T_max: 500
     eta_min: 1.0e-7
 
 train:
   seq_length: 256
+  # The paper does not specify a total step / epoch budget for the PPO stage.
+  # Treat the values below as a user-tunable training budget, not a paper spec.
   epochs: 3
   total_steps: 500
   batch_size: 1
-  max_batches: 200
+  # max_batches: null disables the artificial early-stop in reward_fn so PPO
+  # runs for the full `total_steps` above (paper does not impose a batch cap).
+  # Set to a positive integer only if you need a hard wall-clock safety stop.
+  max_batches: null
   trainer: "AcceleratePPOTrainer"
   tracker: null
   checkpoint_interval: 500
@@ -111,12 +121,16 @@ video:
 
 method:
   name: 'ppoconfig'
+  # PPO rollout / inner-loop budget — paper does not pin these.
   num_rollouts: 4
   chunk_size: 4
   ppo_epochs: 5
+  # init_kl_coef is the lambda in Eq. 6 (KL penalty against G_initial). The
+  # paper introduces this term but does not pin its value.
   init_kl_coef: 0.7
   target: 0.1
   horizon: 5000
+  # Paper § 4.1: gamma=1.0, lam=0.95 (pinned).
   gamma: 1
   lam: 0.95
   cliprange: 0.1

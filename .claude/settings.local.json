@@ -27,7 +27,9 @@
       "Bash(python -c \"import json; d=json.load\\(open\\('Meta-Llama-3-8B/model.safetensors.index.json'\\)\\); files=set\\(d['weight_map'].values\\(\\)\\); print\\(sorted\\(files\\)\\)\")",
       "Bash(awk '{print $5, $9}')",
       "Bash(awk '{print \"rx_bytes:\", $2}')",
-      "Bash(/home/zhw/miniconda3/bin/hf download *)"
+      "Bash(/home/zhw/miniconda3/bin/hf download *)",
+      "Bash(python -c \"import ast, yaml; ast.parse\\(open\\('stage2_ppo/train_ppo.py', encoding='utf-8'\\).read\\(\\)\\); yaml.safe_load\\(open\\('configs/ppo_config.yml', encoding='utf-8'\\).read\\(\\)\\); print\\('ok'\\)\")",
+      "Bash(python -c \"import ast, json; ast.parse\\(open\\('stage2_ppo/train_ppo.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('stage2_ppo/rewards.py', encoding='utf-8'\\).read\\(\\)\\); print\\('python ok'\\)\")"
     ]
   }
 }

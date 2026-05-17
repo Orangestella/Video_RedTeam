@@ -136,7 +136,15 @@ class VideoRewardPipeline:
         self.t5_cpu = cfg.video.t5_cpu
 
         self.total_batches = 0
-        self.max_batches = getattr(cfg.train, 'max_batches', None)
+        # Optional safety wall: stop after this many reward batches even if
+        # trlx's total_steps hasn't been hit yet. None / 0 / negative = no cap,
+        # which matches the paper (§ 4.1 does not pin the PPO budget).
+        raw_max_batches = getattr(cfg.train, 'max_batches', None)
+        try:
+            raw_max_batches = int(raw_max_batches) if raw_max_batches is not None else None
+        except (TypeError, ValueError):
+            raw_max_batches = None
+        self.max_batches = raw_max_batches if (raw_max_batches and raw_max_batches > 0) else None
         self.batch_times = []
 
         videoalign_dir = os.path.join(os.path.dirname(__file__), "..", "VideoAlign")
