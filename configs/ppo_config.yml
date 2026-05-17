@@ -126,13 +126,15 @@ method:
   ref_std: null
   cliprange_reward: 1.0
   vf_coef: 1.0
+  # Sampling-based rollouts. PPO needs sample variance (so the advantage has
+  # signal) and transformers>=5 moved Group Beam Search out of core into a
+  # remote `custom_generate` repo, which we deliberately avoid. If you want
+  # to revisit beam search later, set `do_sample=False`, pick `num_beams>1`
+  # WITHOUT `num_beam_groups`, and pass `custom_generate=...` explicitly.
   gen_kwargs:
     max_new_tokens: 100
     min_length: 3
-    top_k: 0.0
-    top_p: 1.0
-    do_sample: False
-    temperature: 0.7
-    diversity_penalty: 1.0
-    num_beams: 16
-    num_beam_groups: 16
+    do_sample: True
+    temperature: 0.9
+    top_p: 0.95
+    top_k: 50

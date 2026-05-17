@@ -10,6 +10,7 @@ policy, which is handled inside trlx via init_kl_coef in ppo_config.yml.
 """
 
 import argparse
+import inspect
 import json
 import os
 import random
@@ -239,18 +240,25 @@ class VideoRewardPipeline:
                 for i, (prompt, output_path) in enumerate(zip(prompts, output_paths)):
                     print(f"Generating video {i+1}/{len(prompts)}: {output_path}")
                     try:
-                        video = self.wan_t2v.generate(
-                            prompt,
+                        # Note: upstream ``Wan2.2/wan/text2video.py:WanT2V.generate``
+                        # used to accept ``max_area`` but the current version
+                        # derives it internally from ``size``. We only pass
+                        # kwargs the live signature still accepts to stay
+                        # forward-compatible across Wan2.x revisions.
+                        gen_kwargs = dict(
                             size=self.wan_size_config,
-                            max_area=self.wan_max_area_config,
                             frame_num=self.wan_frame_num,
                             shift=5.0,
                             sample_solver='unipc',
                             sampling_steps=25,
                             guide_scale=5.0,
                             seed=random.randint(0, 2**32-1),
-                            offload_model=self.offload_model
+                            offload_model=self.offload_model,
                         )
+                        accepted = set(inspect.signature(self.wan_t2v.generate).parameters)
+                        if 'max_area' in accepted:
+                            gen_kwargs['max_area'] = self.wan_max_area_config
+                        video = self.wan_t2v.generate(prompt, **gen_kwargs)
 
                         from wan.utils.utils import save_video
                         save_video(
