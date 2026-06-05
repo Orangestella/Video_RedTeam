@@ -1,14 +1,29 @@
 model:
-  model_path: "./checkpoints/sft_checkpoint"  # Path to Stage 1 SFT checkpoint
-  num_layers_unfrozen: 2
+  # PPO trains from the SFT-merged full model, then attaches a fresh PPO LoRA
+  # adapter. The original SFT adapter is not updated during PPO.
+  model_path: "./checkpoints/sft_merged"
+  # This is LoRA-on-merged-SFT. Keep -1 so trlx does not freeze adapter modules
+  # after PEFT has already frozen the merged base model.
+  num_layers_unfrozen: -1
+  peft_config:
+    peft_type: "LORA"
+    task_type: "CAUSAL_LM"
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+    bias: "none"
   model_extra_configs:
     attn_implementation: "eager"
 
 tokenizer:
-  tokenizer_path: "./checkpoints/sft_checkpoint"
+  # Use the base Llama tokenizer. The SFT adapter directory may contain a
+  # TokenizersBackend tokenizer_config that only works in one custom env.
+  tokenizer_path: "./checkpoints/Meta-Llama-3-8B-Instruct"
   padding_side: "left"
   truncation_side: "right"
-  tokenizer_extra_configs: {}
+  tokenizer_extra_configs:
+    pad_token: "<|eot_id|>"
 
 # Optimizer / scheduler / training-length controls.
 # TEAR paper § 4.1 pins the online-RL stage to: AdamW, LR 1e-6, gamma=1.0,
@@ -32,7 +47,10 @@ scheduler:
 train:
   seq_length: 256
   # The paper does not specify a total step / epoch budget for the PPO stage.
-  # Treat the values below as a user-tunable training budget, not a paper spec.
+  # IMPORTANT: trlx ``epochs`` = rollout refresh cycles (each pulls
+  # ``method.num_rollouts`` prompts), NOT one pass over the JSON file.
+  # With full_dataset: true, epochs & total_steps are auto-set from data_path size.
+  full_dataset: true
   epochs: 3
   total_steps: 500
   batch_size: 1
@@ -69,6 +87,14 @@ video:
   # Data
   data_path: "./data/ppo_data.json"
 
+  # SFT bootstrap for PPO:
+  # 1) Merge this SFT LoRA adapter into the base model once.
+  # 2) Train a new PPO LoRA adapter on top of the merged SFT model.
+  base_model_path: "./checkpoints/Meta-Llama-3-8B-Instruct"
+  sft_adapter_path: "./checkpoints/sft_checkpoint"
+  merged_sft_model_path: "./checkpoints/sft_merged"
+  force_merge_sft_adapter: false
+
   # Run directory
   run_dir: "./runs/video_ppo"
 
@@ -77,13 +103,22 @@ video:
   reward_cuda: "1"
   video_gen_cuda: "2,3"
 
-  # Video generator (Wan2.2)
+  # Video generator (Wan2.2) — task / ckpt / size must match (see Wan2.2 SUPPORTED_SIZES).
+  # T2V-A14B (default): wan_task t2v-A14B, ckpt Wan2.2-T2V-A14B, e.g. wan_size "1024*704"
+  # TI2V-5B (faster, single DiT): wan_task ti2v-5B, ckpt Wan2.2-TI2V-5B, wan_size "1280*704" or "704*1280"
   wan_script_path: "./Wan2.2/generate.py"
-  wan_task: "t2v-A14B"
-  wan_ckpt_dir: "./checkpoints/Wan2.2-T2V-A14B"
-  wan_size: "1024*704"
+  wan_task: "ti2v-5B"
+  wan_ckpt_dir: "./checkpoints/Wan2.2-TI2V-5B"
+  wan_size: "1280*704"
   wan_frame_num: 50
+  wan_sampling_steps: 25
+  wan_guide_scale: 5.0
+  wan_shift: 5.0
   video_timeout_seconds: 1800
+  # --- switch to TI2V-5B (uncomment and comment the T2V block above) ---
+  # wan_task: "ti2v-5B"
+  # wan_ckpt_dir: "./checkpoints/Wan2.2-TI2V-5B"
+  # wan_size: "1280*704"
 
   # Memory optimization
   offload_model: false
@@ -111,13 +146,11 @@ video:
     alpha2: 0.5
     # Hate-speech classifier g_t (paper [36] Vidgen et al. 2021)
     hate_model_id: "facebook/roberta-hate-speech-dynabench-r4-target"
-    # Sentence encoder T_p(.) for the prototype embedding
-    sentence_encoder_id: "sentence-transformers/all-MiniLM-L6-v2"
-    # Optional path to reference temporal-style prompts used to build the
-    # prototype. Accepts .txt (one per line) or .json/.jsonl with an
-    # 'output'/'prompt'/'text' field. If omitted, the trainer falls back to
-    # the `output` field of the PPO/SFT dataset.
-    reference_prompts_path: null
+    # Local sentence encoder T_p(.) for g_r / prototype embedding.
+    sentence_encoder_id: "./checkpoints/all-MiniLM-L6-v2"
+    # Build prototype from six evenly spaced `output` prompts in SFT data.
+    reference_prompts_path: "./data/sft_data.json"
+    reference_sample_count: 6
 
 method:
   name: 'ppoconfig'
@@ -147,8 +180,12 @@ method:
   # WITHOUT `num_beam_groups`, and pass `custom_generate=...` explicitly.
   gen_kwargs:
     max_new_tokens: 100
-    min_length: 3
+    min_new_tokens: 16
+    do_sample: False
+  gen_experience_kwargs:
+    max_new_tokens: 100
+    min_new_tokens: 16
     do_sample: True
-    temperature: 0.9
-    top_p: 0.95
+    temperature: 0.7
+    top_p: 0.9
     top_k: 50

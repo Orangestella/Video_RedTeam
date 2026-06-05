@@ -73,6 +73,35 @@ def _load_reference_prompts(path: str | None, fallback: Iterable[str] | None = N
     return []
 
 
+def _uniform_sample_prompts(prompts: list[str], sample_count: int | None) -> tuple[list[str], list[int]]:
+    """Deterministically pick evenly spaced reference prompts."""
+    if not sample_count or sample_count <= 0 or sample_count >= len(prompts):
+        return prompts, list(range(len(prompts)))
+    if sample_count == 1:
+        return [prompts[0]], [0]
+
+    last = len(prompts) - 1
+    raw_indices = [round(i * last / (sample_count - 1)) for i in range(sample_count)]
+    indices: list[int] = []
+    used: set[int] = set()
+    for raw in raw_indices:
+        idx = min(max(int(raw), 0), last)
+        if idx in used:
+            right = idx + 1
+            while right <= last and right in used:
+                right += 1
+            left = idx - 1
+            while left >= 0 and left in used:
+                left -= 1
+            idx = right if right <= last else left
+        if idx < 0 or idx in used:
+            continue
+        used.add(idx)
+        indices.append(idx)
+    indices = sorted(indices)
+    return [prompts[i] for i in indices], indices
+
+
 class PromptReward:
     """Implements R_pmt from Eq. 3 of the paper."""
 
@@ -250,6 +279,7 @@ def build_prompt_reward_from_config(cfg, fallback_prompts: list[str] | None = No
             "hate_model_id": getattr(pr_cfg, "hate_model_id", None),
             "sentence_encoder_id": getattr(pr_cfg, "sentence_encoder_id", None),
             "reference_prompts_path": getattr(pr_cfg, "reference_prompts_path", None),
+            "reference_sample_count": getattr(pr_cfg, "reference_sample_count", None),
             "alpha1": getattr(pr_cfg, "alpha1", 0.5),
             "alpha2": getattr(pr_cfg, "alpha2", 0.5),
         }
@@ -260,6 +290,17 @@ def build_prompt_reward_from_config(cfg, fallback_prompts: list[str] | None = No
     enc_id = pr_cfg.get("sentence_encoder_id") or "sentence-transformers/all-MiniLM-L6-v2"
     ref_path = pr_cfg.get("reference_prompts_path")
     ref_prompts = _load_reference_prompts(ref_path, fallback=fallback_prompts)
+    raw_sample_count = pr_cfg.get("reference_sample_count")
+    try:
+        sample_count = int(raw_sample_count) if raw_sample_count is not None else None
+    except (TypeError, ValueError):
+        sample_count = None
+    if ref_prompts and sample_count:
+        ref_prompts, ref_indices = _uniform_sample_prompts(ref_prompts, sample_count)
+        print(
+            f"[PromptReward] uniformly sampled {len(ref_prompts)} reference prompts "
+            f"from {ref_path or 'fallback'} at indices {ref_indices}."
+        )
     return PromptReward(
         hate_model_id=hate_id,
         sentence_encoder_id=enc_id,

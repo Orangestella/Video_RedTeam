@@ -17,6 +17,7 @@ checkpoints/
 data/*.json
 data/*.txt
 *.npy
+data/leftover_by_category
 
 # Logs
 wandb/
