@@ -188,7 +188,7 @@ python video_generation/api_generator.py \
 | Llama Guard 3 8B | GPU 0 | ~16GB |
 | LLM Generator (Llama-3 8B + LoRA) | GPU 1 | ~16GB |
 | Refine Model (Qwen3-VL-2B-Instruct) | GPU 2 | ~6GB |
-| Video Model (Wan2.2-T2V-A14B) | GPU 3 | ~28GB |
+| Target T2V Model (Wan2.2-T2V-A14B) | GPU 3 | ~28GB |
 
 ## Ethical Statement
 
