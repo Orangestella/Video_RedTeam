@@ -107,7 +107,7 @@ We provide our trained checkpoints and use the following public models. All are 
 
 | Model | Description | Link |
 |-------|-------------|------|
-| TEAR-SFT | Stage 1 SFT checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-SFT) |
+| TEAR-SFT | Stage 1 SFT checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/Sayonaraponytail/TEAR-SFT) |
 | TEAR-PPO | Stage 2 PPO checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-PPO) |
 | Meta-Llama-3-8B-Instruct | Base LLM for generator | [meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) |
 | Llama-Guard-3-8B | Textual safety filter | [meta-llama/Llama-Guard-3-8B](https://huggingface.co/meta-llama/Llama-Guard-3-8B) |
