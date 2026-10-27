@@ -108,7 +108,7 @@ We provide our trained checkpoints and use the following public models. All are 
 | Model | Description | Link |
 |-------|-------------|------|
 | TEAR-SFT | Stage 1 SFT checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/Sayonaraponytail/TEAR-SFT) |
-| TEAR-PPO | Stage 2 PPO checkpoint (Llama-3-8B-Instruct + LoRA) | [HuggingFace](https://huggingface.co/<your-org>/TEAR-PPO) |
+| TEAR-PPO | Stage 2 PPO checkpoint (Llama-3-8B-Instruct + LoRA) | Coming Soon|
 | Meta-Llama-3-8B-Instruct | Base LLM for generator | [meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) |
 | Llama-Guard-3-8B | Textual safety filter | [meta-llama/Llama-Guard-3-8B](https://huggingface.co/meta-llama/Llama-Guard-3-8B) |
 | Qwen3-VL-2B-Instruct | VLM for video evaluation & refinement | [Qwen/Qwen3-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct) |
@@ -129,19 +129,18 @@ huggingface-cli download <your-org>/TEAR-PPO --local-dir ./checkpoints/ppo_model
 
 ### Data
 
-Training data and seed prompts are available on HuggingFace. See [`data/README.md`](data/README.md) for format details.
+Only a small set of training data and seed-prompt examples is available on Hugging Face. Because the source data contain harmful content, the full datasets are not publicly released. See [`data/README.md`](data/README.md) for format details.
 
 | Dataset | Description | Link |
 |---------|-------------|------|
-| TEAR-SFT-Data | SFT training data (temporal rewriting pairs) | [HuggingFace](https://huggingface.co/datasets/<your-org>/TEAR-SFT-Data) |
-| TEAR-PPO-Data | PPO training prompts | [HuggingFace](https://huggingface.co/datasets/<your-org>/TEAR-PPO-Data) |
-| TEAR-Seeds | 390 seed prompts (6 categories x 65) from T2VSafetyBench | [HuggingFace](https://huggingface.co/datasets/<your-org>/TEAR-Seeds) |
+| TEAR-SFT-Data | 6 SFT training examples (temporal rewriting pairs) | [Hugging Face](https://huggingface.co/datasets/Sayonaraponytail/TEAR-SFT-Data) |
+| TEAR-PPO-Data | 6 PPO training-input examples | [Hugging Face](https://huggingface.co/datasets/Sayonaraponytail/TEAR-PPO-Data) |
+| TEAR-Seeds | 18 seed-prompt examples (3 per category across 6 categories) | [Hugging Face](https://huggingface.co/datasets/Sayonaraponytail/TEAR-Seeds) |
 
 ```bash
-# Download all data
-huggingface-cli download <your-org>/TEAR-SFT-Data --repo-type dataset --local-dir ./data
-huggingface-cli download <your-org>/TEAR-PPO-Data --repo-type dataset --local-dir ./data
-huggingface-cli download <your-org>/TEAR-Seeds --repo-type dataset --local-dir ./data
+huggingface-cli download Sayonaraponytail/TEAR-SFT-Data --repo-type dataset --local-dir ./data/sft_examples
+huggingface-cli download Sayonaraponytail/TEAR-PPO-Data --repo-type dataset --local-dir ./data/ppo_examples
+huggingface-cli download Sayonaraponytail/TEAR-Seeds --repo-type dataset --local-dir ./data/seed_examples
 ```
 
 ## Usage
